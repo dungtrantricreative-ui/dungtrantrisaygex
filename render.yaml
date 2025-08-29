@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: youtube-analyzer-ai
+    env: python
+    plan: free # Gói miễn phí, có thể tự tắt sau 15p không hoạt động
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn --worker-class gevent --timeout 120 -w 4 app:app"
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false # Bạn sẽ dán API key trực tiếp trên dashboard của Render
+      - key: PYTHON_VERSION
+        value: "3.11.5"

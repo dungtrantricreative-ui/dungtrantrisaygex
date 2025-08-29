@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Analyzer AI - Gemini 1.5 Flash</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        #progressCircle {
+            transition: stroke-dashoffset 1s ease-out;
+        }
+        .loading-bar {
+            animation: loading-bar-animation 2s infinite linear;
+        }
+        @keyframes loading-bar-animation {
+            0% { width: 0%; }
+            50% { width: 100%; }
+            100% { width: 0%; transform: translateX(100%); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-bold text-gray-800 mb-4">
+                🎯 YouTube Video Analyzer AI
+            </h1>
+            <p class="text-xl text-gray-600 mb-2">
+                Powered by Google Gemini 1.5 Flash
+            </p>
+            <p class="text-gray-500">
+                Phân tích video YouTube với AI và nhận điểm số chi tiết + gợi ý cải thiện
+            </p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <form id="analyzeForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        YouTube Video URL
+                    </label>
+                    <input 
+                        type="url" 
+                        id="videoUrl" 
+                        placeholder="https://youtube.com/watch?v=..." 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        required
+                    >
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <input 
+                        type="checkbox" 
+                        id="analyzeContent" 
+                        class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    >
+                    <label for="analyzeContent" class="text-sm text-gray-700">
+                        Phân tích nội dung video (tải xuống 60s đầu - chậm hơn nhưng chi tiết hơn)
+                    </label>
+                </div>
+
+                <button 
+                    type="submit" 
+                    id="analyzeBtn"
+                    class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <i class="fas fa-search mr-2"></i>
+                    Phân Tích Video
+                </button>
+            </form>
+        </div>
+
+        <div id="loading" class="hidden bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">Đang phân tích video...</h3>
+            <p class="text-gray-600">AI đang xử lý, vui lòng đợi từ 30-90 giây, đặc biệt khi phân tích nội dung video.</p>
+            <div class="mt-4 bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div class="loading-bar bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"></div>
+            </div>
+        </div>
+
+        <div id="error" class="hidden bg-red-50 border border-red-200 rounded-2xl p-6">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3"></i>
+                <div>
+                    <h3 class="text-red-800 font-semibold">Có lỗi xảy ra</h3>
+                    <p id="errorMessage" class="text-red-600"></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="results" class="hidden space-y-8">
+            <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Tổng Điểm Video</h2>
+                <div class="relative inline-flex items-center justify-center">
+                    <svg class="w-40 h-40 transform -rotate-90" viewBox="0 0 144 144">
+                        <circle cx="72" cy="72" r="60" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                        <circle id="progressCircle" cx="72" cy="72" r="60" stroke="#3b82f6" stroke-width="8" 
+                                fill="none" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="overallScore" class="text-4xl font-bold text-gray-800"></span>
+                    </div>
+                </div>
+                <p class="text-gray-600 mt-4">trên 100 điểm</p>
+                <div id="viralPotential" class="mt-4 p-4 bg-gradient-to-r from-pink-100 to-purple-100 rounded-lg">
+                    <span class="text-purple-700 font-semibold">🚀 Tiềm năng Viral: </span>
+                    <span id="viralScore" class="text-2xl font-bold text-purple-800"></span>/100
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">Thông Tin Video</h3>
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <div>
+                        <img id="videoThumbnail" class="w-full rounded-lg shadow-md" alt="Video thumbnail">
+                    </div>
+                    <div class="space-y-4">
+                        <h4 id="videoTitle" class="text-xl font-semibold text-gray-800"></h4>
+                        <p id="videoChannel" class="text-gray-600"></p>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-blue-50 p-4 rounded-lg text-center">
+                                <i class="fas fa-eye text-blue-500 text-2xl mb-2"></i>
+                                <p class="text-sm text-gray-600">Lượt xem</p>
+                                <p id="videoViews" class="text-lg font-semibold text-blue-600"></p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg text-center">
+                                <i class="fas fa-thumbs-up text-green-500 text-2xl mb-2"></i>
+                                <p class="text-sm text-gray-600">Lượt thích</p>
+                                <p id="videoLikes" class="text-lg font-semibold text-green-600"></p>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded-lg text-center">
+                                <i class="fas fa-comments text-purple-500 text-2xl mb-2"></i>
+                                <p class="text-sm text-gray-600">Bình luận</p>
+                                <p id="videoComments" class="text-lg font-semibold text-purple-600"></p>
+                            </div>
+                            <div class="bg-orange-50 p-4 rounded-lg text-center">
+                                <i class="fas fa-clock text-orange-500 text-2xl mb-2"></i>
+                                <p class="text-sm text-gray-600">Thời lượng</p>
+                                <p id="videoDuration" class="text-lg font-semibold text-orange-600"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">Điểm Chi Tiết</h3>
+                <div id="detailScores" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-2xl shadow-xl p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-check-circle text-green-500 mr-3"></i> Điểm Mạnh
+                    </h3>
+                    <ul id="strengthsList" class="space-y-2 list-disc list-inside text-gray-700">
+                    </ul>
+                </div>
+                <div class="bg-white rounded-2xl shadow-xl p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-exclamation-circle text-yellow-500 mr-3"></i> Điểm Yếu
+                    </h3>
+                    <ul id="weaknessesList" class="space-y-2 list-disc list-inside text-gray-700">
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">Gợi Ý Cải Thiện</h3>
+                <div id="improvementsList" class="space-y-4">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('analyzeForm');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsDiv = document.getElementById('results');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const videoUrl = document.getElementById('videoUrl').value;
+            const analyzeContent = document.getElementById('analyzeContent').checked;
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Đang Phân Tích...';
+            resultsDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            loading.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url: videoUrl, analyze_video_content: analyzeContent })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (err) {
+                errorMessage.textContent = err.message;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fas fa-search mr-2"></i> Phân Tích Video';
+            }
+        });
+
+        function displayResults(data) {
+            const { video_info, analysis } = data;
+
+            const overallScoreEl = document.getElementById('overallScore');
+            const progressCircle = document.getElementById('progressCircle');
+            const viralScoreEl = document.getElementById('viralScore');
+            
+            overallScoreEl.textContent = analysis.overall_score;
+            viralScoreEl.textContent = analysis.viral_potential;
+            
+            const circumference = 377;
+            const offset = circumference - (analysis.overall_score / 100) * circumference;
+            progressCircle.style.strokeDashoffset = offset;
+
+            document.getElementById('videoThumbnail').src = video_info.thumbnail_url;
+            document.getElementById('videoTitle').textContent = video_info.title;
+            document.getElementById('videoChannel').textContent = `Kênh: ${video_info.channel_name}`;
+            document.getElementById('videoViews').textContent = video_info.view_count.toLocaleString();
+            document.getElementById('videoLikes').textContent = video_info.like_count.toLocaleString();
+            document.getElementById('videoComments').textContent = video_info.comment_count.toLocaleString();
+            const duration = new Date(video_info.duration * 1000).toISOString().substr(11, 8);
+            document.getElementById('videoDuration').textContent = duration;
+
+            const detailScoresEl = document.getElementById('detailScores');
+            detailScoresEl.innerHTML = '';
+            const scoreIcons = { thumbnail: 'fa-image', title: 'fa-heading', description: 'fa-file-alt', tags: 'fa-tags', engagement: 'fa-users', seo: 'fa-chart-line' };
+            for (const [key, value] of Object.entries(analysis.scores)) {
+                detailScoresEl.innerHTML += `
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <i class="fas ${scoreIcons[key] || 'fa-star'} text-gray-500 mr-3"></i>
+                            <h4 class="text-md font-semibold text-gray-700 capitalize">${key.replace('_', ' ')}</h4>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${value}%"></div>
+                            </div>
+                            <span class="ml-3 font-bold text-blue-700">${value}</span>
+                        </div>
+                    </div>`;
+            }
+
+            document.getElementById('strengthsList').innerHTML = analysis.strengths.map(s => `<li>${s}</li>`).join('');
+            document.getElementById('weaknessesList').innerHTML = analysis.weaknesses.map(w => `<li>${w}</li>`).join('');
+
+            const improvementsListEl = document.getElementById('improvementsList');
+            improvementsListEl.innerHTML = '';
+            const priorityColors = { high: 'bg-red-100 text-red-800', medium: 'bg-yellow-100 text-yellow-800', low: 'bg-green-100 text-green-800' };
+            analysis.improvements.forEach(item => {
+                improvementsListEl.innerHTML += `
+                    <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <h5 class="font-bold text-blue-800">${item.category}</h5>
+                            <span class="text-xs font-semibold px-2 py-1 rounded-full ${priorityColors[item.priority] || 'bg-gray-100'}">
+                                Ưu tiên: ${item.priority}
+                            </span>
+                        </div>
+                        <p class="text-gray-700 mb-2">${item.suggestion}</p>
+                        <p class="text-sm text-gray-500"><strong>Tác động:</strong> ${item.impact}</p>
+                    </div>`;
+            });
+
+            resultsDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
